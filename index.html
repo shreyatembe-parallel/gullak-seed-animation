@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Gullak · A note from Gullak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold-1: #FEE1AF;
+    --gold-2: #F5BE62;
+    --gold-3: #E9A53F;
+    --cream:  #FBEFD6;
+    --maroon-ink: #6b1620;          /* matches the baked-in postcard handwriting */
+    --maroon-cta-text: #5a1418;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* shared envelope placement */
+    --env-left: 47.5px;
+    --env-top: 326px;
+    --env-scale: 1.0487;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: #111;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* ---------- Phone frame ---------- */
+  .phone {
+    position: relative;
+    width: 375px; height: 812px;
+    overflow: hidden;
+    cursor: pointer; user-select: none;
+    background: #1a0309;
+  }
+
+  /* dummy app homepage sitting in the background */
+  .bg-home {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0;
+  }
+
+  /* black overlay that the reveal plays on; fades in over the homepage */
+  .scrim {
+    position: absolute; inset: 0; z-index: 1;
+    background: rgba(0, 0, 0, 0.80);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    opacity: 0; transition: opacity .7s ease;
+  }
+  .phone.scene-on .scrim { opacity: 1; }
+
+  /* scene elements (envelope + CTA + heading + glow) fade in with the overlay */
+  .stage, .footer, .heading, .glow { opacity: 0; transition: opacity .7s ease; }
+  .phone.scene-on .stage,
+  .phone.scene-on .footer,
+  .phone.scene-on .heading,
+  .phone.scene-on .glow { opacity: 1; }
+
+  .sunburst {
+    position: absolute; top: 42%; left: 50%; z-index: 2;
+    width: 820px; height: 820px; transform: translate(-50%, -50%);
+    background: repeating-conic-gradient(from 0deg at 50% 50%,
+      rgba(255,222,160,0.04) 0deg 2.6deg,
+      rgba(255,222,160,0)    2.6deg 9deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 6%, #000 26%, transparent 62%);
+            mask-image: radial-gradient(circle at 50% 50%, transparent 6%, #000 26%, transparent 62%);
+    opacity: 0; pointer-events: none; transition: opacity .9s ease;
+  }
+  .phone[data-phase="opening"]  .sunburst,
+  .phone[data-phase="emerging"] .sunburst,
+  .phone[data-phase="center"]   .sunburst,
+  .phone[data-phase="done"]     .sunburst { opacity: 1; }
+  /* red glow sitting behind the envelope */
+  .glow {
+    position: absolute; top: 405px; left: 50%; z-index: 2;
+    width: 520px; height: 520px; transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(203,0,47,0.40) 0%, rgba(203,0,47,0) 62%);
+    pointer-events: none;
+  }
+
+  /* ---------- Heading ---------- */
+  .heading {
+    position: absolute; top: 110px; left: 22px; right: 22px;
+    text-align: center; color: var(--cream);
+    font-size: 23px; font-weight: 600; line-height: 1.34; letter-spacing: -0.2px;
+    z-index: 20;
+    transition: opacity .55s ease, transform .55s var(--ease);
+  }
+  .heading .name { color: var(--gold-2); }
+  .phone[data-phase="center"] .heading,
+  .phone[data-phase="done"]   .heading { opacity: 0; transform: translateY(-12px); }
+
+  /* ---------- Stage ---------- */
+  .stage { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+
+  /* The three envelope layers share identical placement so they read as one object */
+  .env-layer {
+    position: absolute;
+    left: var(--env-left); top: var(--env-top);
+    width: 267px; height: 157px;
+    transform-origin: 50% 62%;
+    transform: scale(var(--env-scale));
+    transition: transform 1s var(--ease), opacity .9s ease;
+  }
+  .env-layer img { position: absolute; display: block; }
+
+  .env-back  { z-index: 1; }
+  .env-mid   { z-index: 3; }
+  .env-front { z-index: 4; }
+  .flap-layer { z-index: 5; perspective: 1200px; top: calc(var(--env-top) - 0.5px); }
+
+  .env-back .back   { left: 0; top: 0; width: 267px; }
+  .env-mid .middle  { left: 0; top: 0; width: 267px; }
+  .env-front .pocket { left: -14.47px; top: 27.34px; width: 296px; }
+
+  /* hinge rotates about the top edge */
+  .flap-hinge {
+    position: absolute; left: 0; top: 0; width: 267px; height: 113px;
+    transform-origin: 50% 0%; transform-style: preserve-3d;
+    transform: rotateX(0deg);
+    transition: transform .9s var(--ease);
+  }
+  .flap-hinge img { position: absolute; backface-visibility: hidden; }
+  .flap-front { left: -14.5px; top: -15px; width: 296px; }
+  .flap-back  { left: 0;       top: 0;     width: 268px; transform: rotateX(180deg); }
+
+  /* ---------- Postcard (landscape; message + "from" are baked into the art) ---------- */
+  .card {
+    position: absolute; left: 50%; top: 340px; width: 206px;
+    transform: translateX(-50%); transform-origin: 50% 50%; z-index: 2;
+    filter: drop-shadow(0 14px 26px rgba(0,0,0,0.45));
+    transition: top 1s var(--ease), width 1s var(--ease), transform 1s var(--ease);
+    will-change: top, width;
+    container-type: inline-size;        /* lets the text scale with the card (cqw units) */
+  }
+  .card .pc-base { width: 100%; display: block; border-radius: 8px; }
+
+  /* Only the "To" line is dynamic — overlaid on the empty top-left of the card.
+     Position/size are in % / cqw so they track the card as it scales. */
+  .pc-to {
+    position: absolute;
+    left: 5.4%; top: 15.5%; width: 60%;
+    font-family: 'Patrick Hand', system-ui, cursive;
+    font-size: 4.6cqw; line-height: 1.2;
+    color: var(--maroon-ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ===================== PHASES ===================== */
+
+  /* flap opens, then sits behind the card */
+  .phone[data-phase="opening"]  .flap-hinge,
+  .phone[data-phase="emerging"] .flap-hinge,
+  .phone[data-phase="center"]   .flap-hinge,
+  .phone[data-phase="done"]     .flap-hinge { transform: translateY(2px) rotateX(-170deg); }
+
+  .phone[data-phase="opening"]  .flap-layer,
+  .phone[data-phase="emerging"] .flap-layer,
+  .phone[data-phase="center"]   .flap-layer,
+  .phone[data-phase="done"]     .flap-layer { z-index: 1; }
+
+  /* card slides up out of the pocket */
+  .phone[data-phase="emerging"] .card { top: 232px; width: 262px; }
+  .phone[data-phase="emerging"] .env-back,
+  .phone[data-phase="emerging"] .env-mid,
+  .phone[data-phase="emerging"] .env-front,
+  .phone[data-phase="emerging"] .flap-layer {
+    transform: scale(calc(var(--env-scale) * 0.97)) translateY(6px);
+    opacity: 0.92;
+  }
+
+  /* card lifts up, enlarges, and tilts slightly for delight */
+  .phone[data-phase="center"] .card,
+  .phone[data-phase="done"]   .card {
+    top: 250px; width: 338px; z-index: 30;
+    transform: translateX(-50%) rotate(-4deg);
+  }
+
+  /* envelope scales down but stays visible as a backdrop behind the card */
+  .phone[data-phase="center"] .env-back,
+  .phone[data-phase="center"] .env-mid,
+  .phone[data-phase="center"] .env-front,
+  .phone[data-phase="center"] .flap-layer,
+  .phone[data-phase="done"]   .env-back,
+  .phone[data-phase="done"]   .env-mid,
+  .phone[data-phase="done"]   .env-front,
+  .phone[data-phase="done"]   .flap-layer {
+    transform: scale(calc(var(--env-scale) * 0.84)) translateY(96px);
+    opacity: 1;
+  }
+
+  /* ---------- Sparkles ---------- */
+  .sparkles { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+  .sparkle {
+    position: absolute; width: 14px; height: 14px;
+    background: #FFD75E;
+    clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+    filter: drop-shadow(0 0 4px rgba(255,215,94,0.7));
+    opacity: 0; transform: scale(0);
+  }
+  .phone[data-phase="done"] .sparkle {
+    animation: twinkle 2s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+    50%      { opacity: 1; transform: scale(1) rotate(90deg); }
+  }
+
+  /* ---------- Footer / CTA ---------- */
+  .footer { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 24px 30px; z-index: 35; }
+  .tagline {
+    text-align: center; color: var(--cream); font-size: 16px; font-weight: 500;
+    margin-bottom: 16px; opacity: 0; transform: translateY(8px);
+    transition: opacity .5s ease, transform .5s var(--ease);
+  }
+  .phone[data-phase="done"] .tagline { opacity: 1; transform: translateY(0); }
+
+  .cta {
+    width: 327px; max-width: 100%; height: 56px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 16px; cursor: pointer;
+    font-family: inherit; font-size: 17px; font-weight: 600; color: var(--maroon-cta-text);
+    background: #FFB05A;
+    transition: opacity .5s ease, transform .35s var(--ease);
+  }
+  .cta:active { transform: scale(0.98); }
+  .cta .lbl-next { display: none; }
+
+  .phone[data-phase="opening"]  .cta,
+  .phone[data-phase="emerging"] .cta,
+  .phone[data-phase="center"]   .cta { opacity: 0; transform: translateY(10px); pointer-events: none; }
+  .phone[data-phase="done"] .cta .lbl-open { display: none; }
+  .phone[data-phase="done"] .cta .lbl-next { display: inline; }
+
+  /* ---------- Demo-only "To" modal ---------- */
+  .modal {
+    position: absolute; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background: rgba(26, 3, 11, 0.55); backdrop-filter: blur(3px);
+    transition: opacity .35s ease;
+  }
+  .modal.hidden { opacity: 0; pointer-events: none; }
+  .modal-card {
+    width: 100%; max-width: 327px;
+    background: var(--cream); border-radius: 22px; padding: 22px 20px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    font-family: 'Poppins', sans-serif;
+  }
+  .modal-card h2 { font-size: 18px; font-weight: 600; color: #3b0d12; margin-bottom: 2px; }
+  .modal-card .sub { font-size: 13px; color: #8a6a52; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; font-weight: 600; color: #6b4a32; margin-bottom: 6px;
+  }
+  .field .count { font-weight: 500; color: #b08a6a; }
+  .field input {
+    width: 100%; border: 1.5px solid #e6d4bd; border-radius: 12px;
+    padding: 11px 13px; font-family: inherit; font-size: 15px; color: #3b0d12;
+    background: #fff; outline: none;
+    transition: border-color .15s ease;
+  }
+  .field input:focus { border-color: var(--gold-3); }
+  .modal .cta { width: 100%; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="phone" id="phone" data-phase="idle">
+    <!-- dummy app homepage in the background -->
+    <img class="bg-home" src="dummy-bg.jpg" alt="" />
+    <div class="scrim"></div>
+
+    <div class="sunburst"></div>
+    <div class="glow"></div>
+
+    <h1 class="heading">There’s a message from <span class="name">Gullak</span> waiting for you!</h1>
+
+    <div class="stage">
+      <div class="env-layer env-back">
+        <img class="back" src="Back.svg" alt="" />
+      </div>
+
+      <div class="card">
+        <img class="pc-base" src="gullak-seed-postcard.png" alt="Postcard from the Gullak team" />
+        <div class="pc-to" id="pcTo"></div>
+      </div>
+
+      <div class="env-layer env-mid">
+        <img class="middle" src="Middle.svg" alt="" />
+      </div>
+
+      <div class="env-layer env-front">
+        <img class="pocket" src="Bottom.svg" alt="" />
+      </div>
+
+      <div class="env-layer flap-layer">
+        <div class="flap-hinge">
+          <img class="flap-front" src="Top-Close.svg" alt="" />
+          <img class="flap-back"  src="Top-Open.svg"  alt="" />
+        </div>
+      </div>
+    </div>
+
+    <div class="sparkles">
+      <span class="sparkle" style="top: 176px; left: 40px;  width: 14px; animation-delay: .0s;"></span>
+      <span class="sparkle" style="top: 162px; left: 304px; width: 11px; animation-delay: .6s;"></span>
+      <span class="sparkle" style="top: 250px; left: 344px; width: 10px; animation-delay: 1.1s;"></span>
+      <span class="sparkle" style="top: 430px; left: 70px;  width: 12px; animation-delay: .85s;"></span>
+      <span class="sparkle" style="top: 446px; left: 296px; width: 9px;  animation-delay: 1.4s;"></span>
+    </div>
+
+    <div class="footer">
+      <div class="tagline">Thousands of people are saying thank-yous to their loved ones, be a part of it.</div>
+      <button class="cta" id="cta">
+        <span class="lbl-open">Tap to open</span>
+        <span class="lbl-next">Explore ‘Golden Thank You Week’</span>
+      </button>
+    </div>
+
+    <!-- DEMO ONLY: "To" capture. The real app already knows the recipient —
+         just call renderPostcard({ to }) before playing the reveal. -->
+    <div class="modal" id="modal">
+      <div class="modal-card">
+        <h2>Who’s this for?</h2>
+        <p class="sub">Add a name to personalise Gullak’s thank-you note.</p>
+
+        <div class="field">
+          <label for="inTo">To <span class="count" id="cntTo">0/24</span></label>
+          <input id="inTo" type="text" maxlength="24" placeholder="Anjali didi" />
+        </div>
+
+        <button class="cta" id="previewBtn">Preview animation</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =====================================================================
+   ANIMATION CORE  (reusable — dev team integrates with this)
+   ---------------------------------------------------------------------
+   This is Gullak's own thank-you postcard: the message and "from" are
+   baked into the card art, so the ONLY dynamic field is "To".
+
+   renderPostcard({ to }) — paints the recipient name onto the card.
+   playReveal() — runs the tap-to-open sequence.
+
+   Real flow: call renderPostcard({ to }) with the known recipient, drop
+   the demo modal, then call playReveal() when the user taps to open.
+   ===================================================================== */
+
+  const phone = document.getElementById('phone');
+  const pcTo  = document.getElementById('pcTo');
+
+  const LIMITS = { to: 24 };
+
+  function renderPostcard({ to = '' } = {}) {
+    pcTo.textContent = to ? `To ${to},` : '';
+  }
+
+  let running = false;
+  const setPhase = p => phone.setAttribute('data-phase', p);
+
+  const OPEN_PAUSE = 180;    // brief beat after the tap before the flap opens
+  function playReveal() {
+    if (running || phone.getAttribute('data-phase') !== 'idle') return;
+    running = true;
+    setTimeout(() => setPhase('opening'),  OPEN_PAUSE);
+    setTimeout(() => setPhase('emerging'), OPEN_PAUSE + 750);
+    setTimeout(() => setPhase('center'),   OPEN_PAUSE + 1650);
+    setTimeout(() => { setPhase('done'); running = false; }, OPEN_PAUSE + 2750);
+  }
+
+/* =====================================================================
+   DEMO HARNESS  (To modal + homepage → overlay reveal)
+   ===================================================================== */
+
+  const modal = document.getElementById('modal');
+  const inTo  = document.getElementById('inTo');
+
+  // live character counter
+  const cntTo = document.getElementById('cntTo');
+  const updCount = () => cntTo.textContent = `${inTo.value.length}/${LIMITS.to}`;
+  inTo.addEventListener('input', updCount); updCount();
+
+  // After "To" is set: show the homepage for a beat, then fade the overlay in.
+  document.getElementById('previewBtn').addEventListener('click', () => {
+    renderPostcard({ to: inTo.value.trim() || inTo.placeholder });
+    modal.classList.add('hidden');
+    setPhase('idle');
+    phone.classList.remove('scene-on');           // land on the bare homepage
+    setTimeout(() => phone.classList.add('scene-on'), 650);  // overlay rises
+  });
+
+  phone.addEventListener('click', (e) => {
+    if (!modal.classList.contains('hidden')) return;      // ignore taps while composing
+    if (!phone.classList.contains('scene-on')) return;    // ignore taps before the overlay
+    const phase = phone.getAttribute('data-phase');
+    if (phase === 'idle') playReveal();
+    else if (phase === 'done' && e.target.closest('#cta')) {   // replay with a new name
+      setPhase('idle');
+      phone.classList.remove('scene-on');
+      modal.classList.remove('hidden');
+    }
+  });
+</script>
+</body>
+</html>
